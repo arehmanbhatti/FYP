@@ -1,0 +1,9 @@
+venv/
+__pycache__/
+*.pyc
+
+# Pretrained YOLO weights (auto-downloaded by ultralytics, don't commit)
+*.pt
+
+# YOLO run artifacts outside the project's own results folder
+runs/
