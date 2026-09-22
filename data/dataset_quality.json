@@ -1,0 +1,91 @@
+{
+  "chinkara": {
+    "images": 60,
+    "corrupt": [],
+    "low_res": [],
+    "duplicates": [],
+    "median_size": [
+      1024,
+      683
+    ]
+  },
+  "golden_jackal": {
+    "images": 60,
+    "corrupt": [],
+    "low_res": [
+      "golden_jackal_207998350.jpg"
+    ],
+    "duplicates": [],
+    "median_size": [
+      1024,
+      683
+    ]
+  },
+  "indian_peafowl": {
+    "images": 60,
+    "corrupt": [],
+    "low_res": [
+      "indian_peafowl_387302621.jpg"
+    ],
+    "duplicates": [],
+    "median_size": [
+      921,
+      1024
+    ]
+  },
+  "leopard": {
+    "images": 60,
+    "corrupt": [],
+    "low_res": [],
+    "duplicates": [],
+    "median_size": [
+      1024,
+      683
+    ]
+  },
+  "mugger": {
+    "images": 60,
+    "corrupt": [],
+    "low_res": [
+      "mugger_109201833.jpg"
+    ],
+    "duplicates": [],
+    "median_size": [
+      1024,
+      683
+    ]
+  },
+  "nilgai": {
+    "images": 60,
+    "corrupt": [],
+    "low_res": [],
+    "duplicates": [],
+    "median_size": [
+      1024,
+      683
+    ]
+  },
+  "striped_hyena": {
+    "images": 60,
+    "corrupt": [],
+    "low_res": [
+      "striped_hyena_66811316.jpg",
+      "striped_hyena_8034406.jpg"
+    ],
+    "duplicates": [],
+    "median_size": [
+      1024,
+      683
+    ]
+  },
+  "wild_boar": {
+    "images": 60,
+    "corrupt": [],
+    "low_res": [],
+    "duplicates": [],
+    "median_size": [
+      1024,
+      683
+    ]
+  }
+}

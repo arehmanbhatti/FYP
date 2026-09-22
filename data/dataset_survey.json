@@ -1,0 +1,101 @@
+[
+  {
+    "key": "leopard",
+    "scientific": "Panthera pardus",
+    "common": "Leopard",
+    "taxon_id": 41963,
+    "oiv7_class": "Leopard",
+    "pakistan": 31,
+    "worldwide": 6776
+  },
+  {
+    "key": "sindh_ibex",
+    "scientific": "Capra aegagrus",
+    "common": "Sindh ibex",
+    "taxon_id": 123070,
+    "oiv7_class": "Goat",
+    "pakistan": 2,
+    "worldwide": 6438
+  },
+  {
+    "key": "chinkara",
+    "scientific": "Gazella bennettii",
+    "common": "Chinkara gazelle",
+    "taxon_id": 42253,
+    "oiv7_class": "Antelope",
+    "pakistan": 11,
+    "worldwide": 632
+  },
+  {
+    "key": "wild_boar",
+    "scientific": "Sus scrofa",
+    "common": "Wild boar",
+    "taxon_id": 42134,
+    "oiv7_class": "Pig",
+    "pakistan": 19,
+    "worldwide": 35197
+  },
+  {
+    "key": "striped_hyena",
+    "scientific": "Hyaena hyaena",
+    "common": "Striped hyena",
+    "taxon_id": 41886,
+    "oiv7_class": null,
+    "pakistan": 0,
+    "worldwide": 6761
+  },
+  {
+    "key": "golden_jackal",
+    "scientific": "Canis aureus",
+    "common": "Golden jackal",
+    "taxon_id": 851014,
+    "oiv7_class": "Dog",
+    "pakistan": 36,
+    "worldwide": 3979
+  },
+  {
+    "key": "indian_peafowl",
+    "scientific": "Pavo cristatus",
+    "common": "Indian peafowl",
+    "taxon_id": 1204,
+    "oiv7_class": "Bird",
+    "pakistan": 12,
+    "worldwide": 24213
+  },
+  {
+    "key": "nilgai",
+    "scientific": "Boselaphus tragocamelus",
+    "common": "Nilgai",
+    "taxon_id": 42426,
+    "oiv7_class": "Antelope",
+    "pakistan": 4,
+    "worldwide": 2367
+  },
+  {
+    "key": "urial",
+    "scientific": "Ovis vignei",
+    "common": "Urial",
+    "taxon_id": 1067775,
+    "oiv7_class": "Sheep",
+    "pakistan": 12,
+    "worldwide": 121
+  },
+  {
+    "key": "mugger",
+    "scientific": "Crocodylus palustris",
+    "common": "Mugger crocodile",
+    "taxon_id": 26063,
+    "oiv7_class": "Crocodile",
+    "pakistan": 5,
+    "worldwide": 2779
+  },
+  {
+    "key": "bengal_fox",
+    "scientific": "Vulpes bengalensis",
+    "common": "Bengal fox",
+    "taxon_id": 42056,
+    "oiv7_class": "Fox",
+    "pakistan": 1,
+    "worldwide": 256
+  }
+]

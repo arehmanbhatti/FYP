@@ -7,3 +7,9 @@ __pycache__/
 
 # YOLO run artifacts outside the project's own results folder
 runs/
+
+# Downloaded dataset (rebuild with scripts/download_dataset.py)
+data/dataset/*/
+
+# Test videos (rebuild with scripts/download_videos.py; attribution.csv is tracked)
+data/sample_videos/*.webm

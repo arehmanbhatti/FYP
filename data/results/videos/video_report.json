@@ -1,0 +1,160 @@
+{
+ "boar_berlin": {
+  "role": "target",
+  "frames_read": 317,
+  "tested": 22,
+  "hit_frames": 0,
+  "classes": {},
+  "best_conf": 0
+ },
+ "boar_bulgaria": {
+  "role": "target",
+  "frames_read": 250,
+  "tested": 21,
+  "hit_frames": 6,
+  "classes": {
+   "Bird": 6
+  },
+  "best_conf": 0.44
+ },
+ "camtrap_general": {
+  "role": "camtrap",
+  "frames_read": 300,
+  "tested": 20,
+  "hit_frames": 20,
+  "classes": {
+   "Deer": 41,
+   "Antelope": 3,
+   "Camel": 7,
+   "Horse": 2
+  },
+  "best_conf": 0.86
+ },
+ "camtrap_jaguarundi": {
+  "role": "camtrap",
+  "frames_read": 450,
+  "tested": 30,
+  "hit_frames": 6,
+  "classes": {
+   "Kangaroo": 4,
+   "Fox": 1,
+   "Carnivore": 1
+  },
+  "best_conf": 0.58
+ },
+ "crocodile_nile": {
+  "role": "standin",
+  "frames_read": 620,
+  "tested": 42,
+  "hit_frames": 10,
+  "classes": {
+   "Person": 7,
+   "Bird": 3
+  },
+  "best_conf": 0.47
+ },
+ "gazelle_hluhluwe": {
+  "role": "standin",
+  "frames_read": 544,
+  "tested": 46,
+  "hit_frames": 46,
+  "classes": {
+   "Antelope": 46,
+   "Bird": 39
+  },
+  "best_conf": 0.78
+ },
+ "human_hiking": {
+  "role": "human",
+  "frames_read": 749,
+  "tested": 50,
+  "hit_frames": 48,
+  "classes": {
+   "Man": 1,
+   "Human face": 1,
+   "Person": 83,
+   "Dog": 3
+  },
+  "best_conf": 0.76
+ },
+ "hyena_spotted": {
+  "role": "standin",
+  "frames_read": 97,
+  "tested": 7,
+  "hit_frames": 7,
+  "classes": {
+   "Dog": 6,
+   "Horse": 1
+  },
+  "best_conf": 0.89
+ },
+ "jackals": {
+  "role": "target",
+  "frames_read": 1222,
+  "tested": 49,
+  "hit_frames": 49,
+  "classes": {
+   "Fox": 50,
+   "Deer": 44,
+   "Dog": 26,
+   "Cat": 4,
+   "Giraffe": 2,
+   "Lion": 5
+  },
+  "best_conf": 0.9
+ },
+ "leopard_india": {
+  "role": "target",
+  "frames_read": 465,
+  "tested": 31,
+  "hit_frames": 31,
+  "classes": {
+   "Cheetah": 31
+  },
+  "best_conf": 0.64
+ },
+ "leopard_tree": {
+  "role": "target",
+  "frames_read": 212,
+  "tested": 18,
+  "hit_frames": 2,
+  "classes": {
+   "Owl": 2
+  },
+  "best_conf": 0.31
+ },
+ "nilgai_zoo": {
+  "role": "target",
+  "frames_read": 627,
+  "tested": 42,
+  "hit_frames": 30,
+  "classes": {
+   "Horse": 14,
+   "Animal": 12,
+   "Deer": 6,
+   "Cattle": 1
+  },
+  "best_conf": 0.68
+ },
+ "peafowl_running": {
+  "role": "target",
+  "frames_read": 552,
+  "tested": 46,
+  "hit_frames": 7,
+  "classes": {
+   "Bird": 8,
+   "Deer": 1
+  },
+  "best_conf": 0.65
+ },
+ "peafowl_walking": {
+  "role": "target",
+  "frames_read": 444,
+  "tested": 30,
+  "hit_frames": 30,
+  "classes": {
+   "Bird": 30
+  },
+  "best_conf": 0.89
+ }
+}
