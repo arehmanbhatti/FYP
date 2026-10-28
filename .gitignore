@@ -13,3 +13,9 @@ data/dataset/*/
 
 # Test videos (rebuild with scripts/download_videos.py; attribution.csv is tracked)
 data/sample_videos/*.webm
+
+# Built training set (rebuild with scripts/build_yolo_dataset.py)
+data/yolo_dataset/
+
+# Annotated pipeline videos (large; rebuild with scripts/video_pipeline.py)
+data/results/pipeline/*.mp4

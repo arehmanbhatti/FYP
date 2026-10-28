@@ -1,0 +1,5 @@
+timestamp,video_time_s,label,conf,type
+2026-10-28T06:04:55,0.00,indian_peafowl,0.978,WILDLIFE
+2026-10-28T06:05:14,6.31,mugger,0.291,WILDLIFE
+2026-10-28T06:05:25,10.07,indian_peafowl,0.950,WILDLIFE
+2026-10-28T06:05:30,11.49,person,0.327,HUMAN INTRUSION

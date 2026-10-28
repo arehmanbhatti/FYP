@@ -176,27 +176,177 @@ New findings from video:
 - No proper measurement on real Sindh or camera-trap footage. The clips are short, and the still
   images from iNaturalist are cleaner than real deployment footage, so real performance will likely be lower.
 
+## Base paper
+
+The project follows Velpula et al. 2026, "Multimodal Deep Learning Based Wildlife Intrusion
+Perception Using YOLOv12 and YAMNet" (`paper3.pdf`): YOLO visual detection, YAMNet audio, a fusion
+layer, and an output layer with alerts and a CSV log. Week 1 builds the visual branch and the
+output layer. Training settings follow the paper: 320x320 input, batch 16, 100 epochs.
+
+## Day 4 — Pretrained or fine-tune?
+
+Decision: **fine-tune.** On Day 3 the pretrained OIV7 model gave the exact species name for under
+40% of images for 5 of the 8 species (leopard, nilgai, jackal, hyena, wild boar). It has no hyena
+class at all. Threshold tuning or a class whitelist cannot fix a wrong class name. Only peafowl
+and mugger worked as is.
+
+## Day 5 — Training dataset, fine-tuning and threshold
+
+Completed:
+- Built a YOLO-format dataset from the Day 2 photos (`scripts/build_yolo_dataset.py`,
+  output `data/yolo_dataset/`): 319 images, 80/20 split per species (256 train / 63 val).
+  Boxes are **pseudo-labels**: the Day 3 pretrained detection, renamed to our species (for
+  example a "Cheetah" box on a leopard photo becomes a `leopard` box). Images with no live animal
+  (Day 3 review) or no usable box were dropped.
+- Fine-tuned YOLO11n at the paper's settings, CPU, 100 epochs (`scripts/train.py`, run in
+  `runs/species_v1/`, weights `best.pt`). The run was interrupted at epoch 26 and resumed.
+- Threshold sweep and a pretrained vs fine-tuned comparison on the same validation images
+  (`scripts/day5_evaluate.py`, full tables in `data/results/day5_summary.md`)
+
+| Train / val images per species | leopard | chinkara | wild boar | hyena | jackal | peafowl | nilgai | mugger |
+|---|---|---|---|---|---|---|---|---|
+| train | 32 | 42 | **14** | 30 | 25 | 43 | 41 | 29 |
+| val | 8 | 10 | **4** | 7 | 6 | 11 | 10 | 7 |
+
+### Results (validation split, 63 images, 76 boxes)
+
+Overall **mAP@50 = 0.700, mAP@50-95 = 0.506**.
+
+F1 is flat between conf 0.20 and 0.30 (0.63). **conf = 0.25** was chosen as the operating
+threshold (precision 0.67, recall 0.61). Raising it to 0.50 gives precision 0.74 but recall drops to 0.51.
+
+| Species | precision | recall | F1 | exact hit, pretrained (Day 3) | exact hit, fine-tuned |
+|---|---|---|---|---|---|
+| leopard | 0.67 | 0.67 | 0.67 | 12% | 88% |
+| chinkara | 0.78 | 0.54 | 0.64 | 30% | 70% |
+| wild boar | 0.50 | 0.40 | 0.44 | 50% | 50% |
+| striped hyena | 0.43 | 0.38 | 0.40 | 0% | 57% |
+| golden jackal | 1.00 | 0.83 | 0.91 | 17% | 83% |
+| indian peafowl | 0.64 | 0.64 | 0.64 | 100% | **73%** |
+| nilgai | 0.64 | 0.54 | 0.58 | 10% | 70% |
+| mugger | 0.70 | 0.88 | 0.78 | 100% | 100% |
+| **all** | 0.67 | 0.61 | 0.63 | **41%** | **75%** |
+
+"Exact hit" = the image gets at least one box with the right species name at conf >= 0.25.
+
+### Observations
+- Fine-tuning fixed the naming problem: exact-species hits went from 41% to 75%. The biggest
+  gains are on leopard, jackal, nilgai and hyena, which the pretrained model mislabelled.
+- **Peafowl got worse** (100% -> 73%). The pretrained model saw millions of birds. Our model saw 43 peafowl photos.
+- **Wild boar is the weakest class.** Only 14 training images. In the confusion matrix 3 of
+  its 5 validation boxes are predicted as peafowl.
+- About a quarter to a third of leopard, nilgai and hyena boxes are missed entirely ("background" in
+  `runs/species_v1/confusion_matrix_normalized.png`).
+- **These numbers are optimistic.** The validation boxes are pseudo-labels from the pretrained model,
+  not hand-drawn. Images where the pretrained model found nothing (hard, small or camouflaged animals)
+  are not in the dataset at all. The validation set is also tiny (4-11 images per species).
+
+## Day 6 — Video detection pipeline
+
+`scripts/video_pipeline.py` implements the visual branch and output layer of the base paper:
+- OpenCV reads a video file or webcam
+- Two detectors per processed frame (every 3rd frame, boxes reused in between): the fine-tuned
+  species model, and the COCO `yolo11n` model restricted to `person` for the human-intrusion alert
+- Output in `data/results/pipeline/`: annotated mp4 (downscaled to 960 px), a CSV with every
+  detection (time, frame, label, confidence, box), and an alerts CSV (one alert per label per 10 s
+  of video, typed WILDLIFE or HUMAN INTRUSION)
+
+**Problem found and fixed.** The species model was trained only on animals, so it labelled
+hikers as nilgai and peafowl with confidence up to 0.97. The pipeline now resolves overlapping
+species and person boxes: if they cover the same object (intersection >= 60% of the smaller box),
+the person box wins when the COCO model is confident (>= 0.5). Otherwise the person box is dropped,
+since a weak "person" on an animal was also a false alarm.
+
+Demo results at conf 0.25, after the fix:
+
+| Clip | Detections | Alerts |
+|---|---|---|
+| leopard_india | leopard 141 (max 0.94), hyena 3 (max 0.29), person 2 | correct leopard alerts; 2 false hyena, 1 false person |
+| peafowl_walking | peafowl 166 (max 0.98), mugger 4, person 2 | correct peafowl alerts; 1 false mugger, 1 false person |
+| human_hiking | person 421 (max 0.95), wild boar 30, peafowl 8, leopard 2 | correct person alerts; nilgai false alarms gone (57 -> 0), peafowl down (99 -> 8), 5 false wildlife alerts left |
+
+Remaining false alarms are mostly low confidence (0.25-0.4). The worst one left is a `wild_boar`
+at 0.88 on a distant hiker that the COCO model does not detect at all, so the overlap rule cannot
+remove it. The real fix is adding images of people and empty scenes as negatives to the training set.
+
+## Day 7 — Prototype vs pretrained on test videos
+
+`scripts/day7_videos.py` runs the full prototype (fine-tuned species model + COCO person model +
+overlap rule) and the Day 3 pretrained OIV7 model on the same 14 test clips, one frame every
+0.5 s, conf >= 0.25. Full table in `data/results/day7_video_summary.md`.
+
+Frames with the correct label / a wrong species label / a false person:
+
+| Clip | expected | pretrained OIV7 | prototype |
+|---|---|---|---|
+| leopard_india | leopard | 0 / 31 / 0 | **28 / 0 / 1** |
+| leopard_tree | leopard | 0 / 2 / 0 | **9 / 0 / 0** |
+| hyena_spotted | striped_hyena | 0 / 7 / 0 | **7 / 0 / 0** |
+| jackals | golden_jackal | 19 / 45 / 0 | **38 / 35 / 0** |
+| peafowl_walking | indian_peafowl | 30 / 0 / 0 | 30 / 0 / 0 |
+| human_hiking | person | 48 / 3 / 0 | 45 / 8 / 0 |
+| gazelle_hluhluwe | chinkara | **46 / 39 / 0** | 11 / 42 / 1 |
+| peafowl_running | indian_peafowl | **6 / 1 / 0** | 0 / 44 / 0 |
+| nilgai_zoo | nilgai | 0 / 20 / 0 | 0 / 26 / 9 |
+| crocodile_nile | mugger | 0 / 3 / 7 | 0 / 0 / 9 |
+| boar_berlin | wild_boar | 0 / 0 / 0 | 0 / 0 / 0 |
+| boar_bulgaria | wild_boar | 0 / 6 / 0 | 0 / 0 / 1 |
+| camtrap_general | none | 0 / 20 / 0 | 0 / 20 / 0 |
+| camtrap_jaguarundi | none | 0 / 6 / 0 | 0 / 10 / 0 |
+
+### Observations
+- **Clear wins on the species the pretrained model could not name:** leopard (0 -> 28 and
+  0 -> 9 frames), hyena (0 -> 7) and jackal (19 -> 38). Peafowl walking stays perfect.
+- **Regressions:** the gazelle clip drops from 46 to 11 correct frames (now called jackal or nilgai),
+  and peafowl_running drops from 6 to 0: the herd of chital deer in it is called nilgai and wild boar.
+- **Nilgai is not recognised in the zoo clip** (labelled wild boar), and the COCO person model
+  fires on it in 9 frames. On crocodile_nile the person model fires on a stork (9 frames).
+- **Wild boar is still 0** on both clips (night and dusk footage). It has the fewest training
+  images, and no night or IR images were in the training set.
+- **No "unknown animal" handling.** Camera-trap clips with non-target animals (elk, jaguarundi)
+  are forced into one of our 8 classes.
+
+### Next steps (Week 2)
+More data per species (200-300 images, boxes reviewed in Roboflow, night/IR images, people and
+empty scenes as negatives), retrain on Colab (also YOLOv12 to match the base paper), then the
+YAMNet audio branch and the fusion layer.
+
 ## How to run
 
 ```
-venv\Scripts\python.exe scripts\detect.py --source data\sample_images\deer.jpg
 venv\Scripts\python.exe scripts\detect.py --source data\sample_images\leopard.jpg
-venv\Scripts\python.exe scripts\detect.py --source data\sample_images\person_hiking.jpg
+venv\Scripts\python.exe scripts\train.py                 (add --resume to continue an interrupted run)
+venv\Scripts\python.exe scripts\day5_evaluate.py
+venv\Scripts\python.exe scripts\video_pipeline.py --source data\sample_videos\leopard_india.webm --conf 0.25
+venv\Scripts\python.exe scripts\video_pipeline.py --source 0 --show --conf 0.25      (webcam)
+venv\Scripts\python.exe scripts\day7_videos.py --conf 0.25
 ```
 
-Annotated output images are saved to `data/results/run/`.
+Annotated images go to `data/results/run/`, pipeline output to `data/results/pipeline/`.
 
 ## Project structure
 
 ```
 FYP/
-  venv/                  Python virtual environment
+  venv/                     Python virtual environment
+  paper3.pdf                base paper (Velpula et al. 2026)
   data/
-    sample_images/       test images for detection
-    sample_videos/        test videos for detection
-    results/              YOLO output (annotated images/videos)
+    dataset/                Day 2 species photos
+    yolo_dataset/           YOLO-format training set (data.yaml, 8 classes)
+    sample_images/          test images
+    sample_videos/          test clips (Day 3 / Day 7)
+    results/                Day 3/5/7 summaries, annotated images, pipeline output
+  runs/species_v1/          fine-tuned model (weights/best.pt) and training plots
   scripts/
-    detect.py             runs YOLO detection on an image or video
+    detect.py               YOLO detection on an image or video
+    download_dataset.py, check_dataset.py, flag_evidence.py   Day 2 dataset
+    evaluate_pretrained.py, day3_adjusted.py, evaluate_videos.py   Day 3 evaluation
+    build_yolo_dataset.py   Day 5 dataset from pseudo-labels
+    train.py                Day 5 fine-tuning
+    day5_evaluate.py        Day 5 threshold sweep and comparison
+    video_pipeline.py       Day 6 video pipeline (species + person, alerts, CSV log)
+    day7_videos.py          Day 7 prototype vs pretrained on test clips
+    make_report.py, make_week1_report.py   PDF reports
   requirements.txt
 ```
 
