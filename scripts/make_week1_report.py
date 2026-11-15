@@ -107,9 +107,9 @@ story.append(make_table(
         ["2", "Species shortlist, initial dataset", "8 target species + human, 480 photos"],
         ["3", "Pretrained model evaluation", "Exact species name for only 41% of images"],
         ["4", "Pretrained or fine-tune?", "Decision: fine-tune"],
-        ["5", "Training dataset, fine-tuning, threshold", "mAP@50 0.700, conf 0.25 chosen"],
+        ["5", "Training dataset, fine-tuning, threshold", "mAP@50 0.707, conf 0.40 chosen"],
         ["6", "Video detection pipeline", "Species + person detection, alerts, CSV log"],
-        ["7", "Prototype vs pretrained on test videos", "Big gains on leopard, hyena, jackal"],
+        ["7", "Prototype vs pretrained on test videos", "Big gains on leopard, hyena, nilgai"],
     ],
     [1.2 * cm, 6.6 * cm, 7.7 * cm],
 ))
@@ -133,30 +133,34 @@ story.append(Paragraph(
     "Threshold tuning cannot fix a wrong class name, so the model was fine-tuned on our 8 species. "
     "The training set (319 images, 256 train / 63 val) uses pseudo-labels: the pretrained model's boxes "
     "renamed to our species. YOLO11n was trained at the base paper's settings (320x320, batch 16, "
-    "100 epochs).", body))
+    "100 epochs). The model was retrained on a local GPU (GTX 1660 Super, about 15 minutes) after "
+    "the project was moved to a new machine; all numbers below are from that run.", body))
 story.append(Spacer(1, 5))
-story.append(Paragraph("Validation result: mAP@50 = 0.700, mAP@50-95 = 0.506, conf = 0.25 "
-                       "(precision 0.67, recall 0.61).", result_style))
+story.append(Paragraph("Validation result: mAP@50 = 0.707, mAP@50-95 = 0.546. Best F1 at conf = 0.40 "
+                       "(precision 0.77, recall 0.61, F1 0.68).", result_style))
 story.append(Spacer(1, 5))
 story.append(make_table(
     ["Species", "Precision", "Recall", "Exact hit, pretrained", "Exact hit, fine-tuned"],
     [
-        ["Leopard", "0.67", "0.67", "12%", "88%"],
-        ["Chinkara", "0.78", "0.54", "30%", "70%"],
-        ["Wild boar", "0.50", "0.40", "50%", "50%"],
-        ["Striped hyena", "0.43", "0.38", "0%", "57%"],
-        ["Golden jackal", "1.00", "0.83", "17%", "83%"],
-        ["Indian peafowl", "0.64", "0.64", "100%", "73%"],
-        ["Nilgai", "0.64", "0.54", "10%", "70%"],
-        ["Mugger", "0.70", "0.88", "100%", "100%"],
-        ["All", "0.67", "0.61", "41%", "75%"],
+        ["Leopard", "0.75", "0.67", "12%", "88%"],
+        ["Chinkara", "0.73", "0.62", "30%", "80%"],
+        ["Wild boar", "1.00", "0.20", "50%", "50%"],
+        ["Striped hyena", "0.80", "1.00", "0%", "100%"],
+        ["Golden jackal", "1.00", "0.33", "17%", "33%"],
+        ["Indian peafowl", "0.80", "0.57", "100%", "73%"],
+        ["Nilgai", "0.67", "0.62", "10%", "80%"],
+        ["Mugger", "0.83", "0.62", "100%", "86%"],
+        ["All", "0.77", "0.61", "41%", "76%"],
     ],
     [3.5 * cm, 2.2 * cm, 2.2 * cm, 3.8 * cm, 3.8 * cm],
 ))
+story.append(Paragraph("Precision and recall: box level at conf 0.40. Exact hit: share of validation "
+                       "images where the right species is named (conf 0.25).", body))
 story.append(Spacer(1, 4))
 story.extend(bullets([
-    "Fine-tuning fixed the naming problem: exact-species hits went from 41% to 75%.",
-    "Peafowl got worse (100% to 73%) and wild boar is the weakest class (only 14 training images).",
+    "Fine-tuning fixed the naming problem: exact-species hits went from 41% to 76%.",
+    "Wild boar (recall 0.20, only 14 training images) and golden jackal (recall 0.33) are the "
+    "weakest classes. Peafowl got worse than the pretrained model (100% to 73%).",
     "These numbers are optimistic: validation boxes are pseudo-labels, not hand-drawn, and the "
     "validation set is tiny (4 to 11 images per species).",
 ]))
@@ -170,7 +174,8 @@ story.extend(bullets([
     "one alert per label per 10 seconds).",
     "Problem found: the species model labelled hikers as nilgai or peafowl (confidence up to 0.97), "
     "since it never saw people. Fixed with an overlap rule between person and species boxes: nilgai "
-    "false alarms on the hiking clip went from 57 to 0.",
+    "false alarms on the hiking clip went from 57 to 0. Wild boar is still wrongly detected in 17 "
+    "of the hiking frames.",
 ]))
 
 # ---------------- Day 7 ----------------
@@ -182,29 +187,31 @@ story.append(Spacer(1, 5))
 story.append(make_table(
     ["Clip", "Expected", "Pretrained", "Prototype"],
     [
-        ["leopard_india", "leopard", "0 / 31 / 0", "28 / 0 / 1"],
-        ["leopard_tree", "leopard", "0 / 2 / 0", "9 / 0 / 0"],
-        ["hyena_spotted", "striped hyena", "0 / 7 / 0", "7 / 0 / 0"],
-        ["jackals", "golden jackal", "19 / 45 / 0", "38 / 35 / 0"],
-        ["peafowl_walking", "Indian peafowl", "30 / 0 / 0", "30 / 0 / 0"],
-        ["human_hiking", "person", "48 / 3 / 0", "45 / 8 / 0"],
-        ["gazelle_hluhluwe", "chinkara", "46 / 39 / 0", "11 / 42 / 1"],
+        ["leopard_india", "leopard", "0 / 31 / 0", "31 / 2 / 1"],
+        ["leopard_tree", "leopard", "0 / 2 / 0", "12 / 0 / 0"],
+        ["hyena_spotted", "striped hyena", "0 / 7 / 0", "6 / 1 / 0"],
+        ["jackals", "golden jackal", "19 / 45 / 0", "27 / 35 / 0"],
+        ["peafowl_walking", "Indian peafowl", "30 / 0 / 0", "28 / 15 / 0"],
+        ["human_hiking", "person", "48 / 3 / 0", "46 / 3 / 0"],
+        ["gazelle_hluhluwe", "chinkara", "46 / 39 / 0", "0 / 46 / 0"],
         ["peafowl_running", "Indian peafowl", "6 / 1 / 0", "0 / 44 / 0"],
-        ["nilgai_zoo", "nilgai", "0 / 20 / 0", "0 / 26 / 9"],
-        ["crocodile_nile", "mugger", "0 / 3 / 7", "0 / 0 / 9"],
-        ["boar_berlin", "wild boar", "0 / 0 / 0", "0 / 0 / 0"],
-        ["boar_bulgaria", "wild boar", "0 / 6 / 0", "0 / 0 / 1"],
-        ["camtrap_general", "none", "0 / 20 / 0", "0 / 20 / 0"],
-        ["camtrap_jaguarundi", "none", "0 / 6 / 0", "0 / 10 / 0"],
+        ["nilgai_zoo", "nilgai", "0 / 20 / 0", "20 / 7 / 9"],
+        ["crocodile_nile", "mugger", "0 / 3 / 7", "0 / 3 / 9"],
+        ["boar_berlin", "wild boar", "0 / 0 / 0", "1 / 4 / 0"],
+        ["boar_bulgaria", "wild boar", "0 / 6 / 0", "1 / 0 / 1"],
+        ["camtrap_general", "none", "0 / 20 / 0", "0 / 19 / 0"],
+        ["camtrap_jaguarundi", "none", "0 / 6 / 0", "0 / 7 / 0"],
     ],
     [4.3 * cm, 3.6 * cm, 3.8 * cm, 3.8 * cm],
 ))
 story.append(Spacer(1, 4))
 story.extend(bullets([
-    "Clear wins on species the pretrained model could not name: leopard, hyena and jackal.",
-    "Regressions: the gazelle clip (46 to 11 correct) and peafowl_running, where a chital herd is "
-    "called nilgai and wild boar. Nilgai in the zoo clip is labelled wild boar.",
-    "Wild boar is still not detected in night and dusk footage. No night or IR images were used in training.",
+    "Clear wins on species the pretrained model could not name: leopard (0 to 31 and 0 to 12 correct "
+    "frames), hyena (0 to 6), nilgai in the zoo clip (0 to 20) and jackal (19 to 27).",
+    "Regressions: the gazelle clip (46 to 0 correct, every frame called nilgai) and peafowl_running "
+    "(6 to 0), where a chital herd is called nilgai. On peafowl_walking, 15 frames also show a false mugger.",
+    "Wild boar is detected in only 1 frame per boar clip (night and dusk footage). No night or IR "
+    "images were used in training.",
     "There is no unknown-animal handling: non-target animals in camera-trap clips are forced into one "
     "of the 8 classes. The COCO person model also fires on some animals (stork, nilgai).",
 ]))
@@ -214,7 +221,7 @@ story.append(Paragraph("Limitations and Next Steps", h1))
 story.extend(bullets([
     "More data: 200 to 300 images per species with boxes reviewed in Roboflow, including night/IR images, "
     "and people and empty scenes as negative examples.",
-    "Retrain on Google Colab, and also train YOLOv12 to match the base paper exactly.",
+    "Retrain on the local GPU with the larger dataset, and also train YOLOv12 to match the base paper exactly.",
     "Week 2: YAMNet audio branch and the fusion layer from the base paper, then measure how much fusion "
     "improves detection (the paper gives no numbers for this).",
 ]))
