@@ -311,6 +311,24 @@ More data per species (200-300 images, boxes reviewed in Roboflow, night/IR imag
 empty scenes as negatives), retrain on Colab (also YOLOv12 to match the base paper), then the
 YAMNet audio branch and the fusion layer.
 
+## Setup on a new machine
+
+Large files are not in git (venv, photos, videos, weights). Rebuild them:
+
+```
+py install 3.12                                   (PyTorch has no wheels for Python 3.15 yet)
+py -3.12 -m venv venv
+venv\Scripts\python.exe -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cu126
+venv\Scripts\python.exe -m pip install -r requirements.txt
+venv\Scripts\python.exe scripts\restore_dataset.py       (the exact 480 Day 2 photos, by observation id)
+venv\Scripts\python.exe scripts\download_videos.py       (the 14 test clips)
+venv\Scripts\python.exe scripts\build_yolo_dataset.py
+venv\Scripts\python.exe scripts\train.py                 (about 15 min on a GTX 1660 Super)
+```
+
+Do not use `download_dataset.py` to restore: it samples photos at random, so the files would not
+match the Day 3 detections and pseudo-labels.
+
 ## How to run
 
 ```

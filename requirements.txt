@@ -1,2 +1,7 @@
+# Python 3.12 (PyTorch has no wheels for 3.15 yet)
+# GPU (NVIDIA): install torch first, then the rest:
+#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cu126
+#   pip install -r requirements.txt
 ultralytics
 opencv-python
+reportlab

@@ -14,6 +14,7 @@ Usage:
 """
 
 import csv
+import hashlib
 import json
 import re
 import time
@@ -43,10 +44,10 @@ VIDEOS = {
 }
 
 
-def api(**params):
+def api(retries=12, **params):
     params["format"] = "json"
     url = "https://commons.wikimedia.org/w/api.php?" + urllib.parse.urlencode(params)
-    for attempt in range(12):
+    for attempt in range(retries):
         try:
             with urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": UA}), timeout=30) as r:
                 return json.load(r)
@@ -70,8 +71,39 @@ def download(url, dest):
     return False
 
 
+def direct_url(title):
+    """Commons stores File:X at upload.wikimedia.org/.../<md5[0]>/<md5[:2]>/X (spaces -> _)."""
+    name = title.replace(" ", "_")
+    h = hashlib.md5(name.encode("utf-8")).hexdigest()
+    return f"https://upload.wikimedia.org/wikipedia/commons/{h[0]}/{h[:2]}/{urllib.parse.quote(name)}"
+
+
+def main_direct():
+    """Fallback when the Commons API host is unreachable (e.g. blocked DNS):
+    fetch the files straight from upload.wikimedia.org and keep the tracked attribution.csv."""
+    ok = 0
+    for name, (title, _, _) in VIDEOS.items():
+        dest = OUT / f"{name}{Path(title).suffix}"
+        if dest.exists():
+            print(f"{name}: already downloaded")
+            ok += 1
+            continue
+        print(f"{name}: downloading (direct)")
+        if download(direct_url(title), dest):
+            ok += 1
+        else:
+            print(f"  FAILED {name}")
+        time.sleep(1)
+    print(f"Done: {ok}/{len(VIDEOS)} videos (attribution.csv left unchanged)")
+
+
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
+    try:
+        api(action="query", meta="siteinfo", retries=2)
+    except RuntimeError:
+        print("Commons API unreachable, falling back to direct upload.wikimedia.org URLs")
+        return main_direct()
     rows = []
     for name, (title, role, what) in VIDEOS.items():
         pages = api(action="query", titles="File:" + title, prop="imageinfo",
