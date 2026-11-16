@@ -39,10 +39,11 @@
     "key": "striped_hyena",
     "scientific": "Hyaena hyaena",
     "common": "Striped hyena",
-    "taxon_id": 41886,
+    "taxon_id": 41888,
     "oiv7_class": null,
-    "pakistan": 0,
-    "worldwide": 6761
+    "pakistan": 3,
+    "worldwide": 509,
+    "note": "Corrected 2026-11-16. The first survey used taxon 41886 (Crocuta crocuta, spotted hyena): 6761 / 0."
   },
   {
     "key": "golden_jackal",

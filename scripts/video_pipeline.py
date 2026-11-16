@@ -7,10 +7,13 @@ Base paper (Velpula et al. 2026) architecture:
   fusion layer      confirm with both modalities (later week, once audio exists)
   output layer      on-screen boxes, alerts, CSV detection log   (here)
 
-Two detectors run on each processed frame:
+Three detectors run on each processed frame:
   - the fine-tuned species model (8 target species, from scripts/train.py)
   - a COCO model restricted to 'person', for the human-intrusion / poaching alert,
     since the species model has no human class
+  - a small open-vocabulary model (YOLO-World, prompt "animal") that finds animals
+    the species model does not know; these are reported as 'unknown_animal'
+    instead of being forced into one of the 8 species (turn off with --no-unknown)
 
 Outputs in data/results/pipeline/:
   <video>_annotated.mp4   frames with boxes and labels
@@ -32,17 +35,21 @@ from ultralytics import YOLO
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "data" / "results" / "pipeline"
-SPECIES_MODEL = ROOT / "runs" / "species_v1" / "weights" / "best.pt"
+SPECIES_MODEL = ROOT / "runs" / "species_v2" / "weights" / "best.pt"
 PERSON_MODEL = "yolo11n.pt"  # COCO, class 0 = person
 COOLDOWN_SEC = 10
 SPECIES_COLOR = (0, 200, 0)
 PERSON_COLOR = (0, 0, 255)
+UNKNOWN_COLOR = (0, 165, 255)
+GENERIC_MODEL = ROOT / "models" / "yolov8s-worldv2.pt"
+GENERIC_PROMPTS = ["animal", "bird", "reptile"]
+UNKNOWN_CONF = 0.35   # open-vocab boxes are noisier, so a higher bar
+PERSON_CONF = 0.40    # the COCO person model fired on crocodiles and nilgai at 0.25-0.4
 OUT_WIDTH = 960  # annotated video is downscaled to keep files small
-# The species model never saw people in training, so it labels hikers as nilgai/peafowl
-# with high confidence. When a species box and a person box cover the same object, the
-# COCO person model wins if it is confident; otherwise the person box is the false one.
+# When a species box and a person box cover the same object, the more confident one wins.
+# (v1 always trusted a person box above 0.5, which turned crocodiles and nilgai into people;
+# the v2 species model was trained with people as negatives, so it rarely fires on hikers.)
 OVERLAP = 0.6       # intersection / smaller box area
-PERSON_TRUST = 0.5
 
 
 def overlap(a, b):
@@ -58,27 +65,43 @@ def resolve(species, persons):
     for i, s in enumerate(species):
         for j, p in enumerate(persons):
             if overlap(s[2], p[2]) >= OVERLAP:
-                (drop_s if p[1] >= PERSON_TRUST else drop_p).add(i if p[1] >= PERSON_TRUST else j)
+                if p[1] > s[1]:
+                    drop_s.add(i)
+                else:
+                    drop_p.add(j)
     return ([s for i, s in enumerate(species) if i not in drop_s]
             + [p for j, p in enumerate(persons) if j not in drop_p])
 
 
-def detect(species_model, person_model, frame, conf, species_imgsz):
+def load_generic():
+    m = YOLO(str(GENERIC_MODEL))
+    m.set_classes(GENERIC_PROMPTS)
+    return m
+
+
+def detect(species_model, person_model, frame, conf, species_imgsz, generic_model=None):
     """Return [(label, conf, (x1, y1, x2, y2), is_person), ...] for one frame."""
     species, persons = [], []
     r = species_model.predict(frame, conf=conf, imgsz=species_imgsz, verbose=False)[0]
     for b in r.boxes:
         species.append((species_model.names[int(b.cls[0])], float(b.conf[0]),
                         tuple(int(v) for v in b.xyxy[0].tolist()), False))
-    r = person_model.predict(frame, conf=conf, classes=[0], verbose=False)[0]
+    r = person_model.predict(frame, conf=max(conf, PERSON_CONF), classes=[0], verbose=False)[0]
     for b in r.boxes:
         persons.append(("person", float(b.conf[0]), tuple(int(v) for v in b.xyxy[0].tolist()), True))
-    return resolve(species, persons)
+    found = resolve(species, persons)
+    if generic_model is not None:
+        r = generic_model.predict(frame, conf=max(conf, UNKNOWN_CONF), verbose=False)[0]
+        for b in r.boxes:
+            box = tuple(int(v) for v in b.xyxy[0].tolist())
+            if all(overlap(box, f[2]) < 0.3 for f in found):
+                found.append(("unknown_animal", float(b.conf[0]), box, False))
+    return found
 
 
 def draw(frame, found):
     for label, c, (x1, y1, x2, y2), is_person in found:
-        color = PERSON_COLOR if is_person else SPECIES_COLOR
+        color = PERSON_COLOR if is_person else UNKNOWN_COLOR if label == "unknown_animal" else SPECIES_COLOR
         cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
         text = f"{label} {c:.2f}"
         (tw, th), _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)
@@ -94,10 +117,12 @@ def main():
     parser.add_argument("--conf", type=float, default=0.3)
     parser.add_argument("--every", type=int, default=3, help="run detection every N frames, reuse boxes between")
     parser.add_argument("--show", action="store_true", help="show a live window (press q to stop)")
+    parser.add_argument("--no-unknown", action="store_true", help="skip the unknown-animal detector")
     args = parser.parse_args()
 
     species_model = YOLO(args.species_model)
     person_model = YOLO(PERSON_MODEL)
+    generic_model = None if args.no_unknown else load_generic()
 
     is_cam = args.source.isdigit()
     cap = cv2.VideoCapture(int(args.source) if is_cam else args.source)
@@ -126,7 +151,7 @@ def main():
             break
         t = idx / fps
         if idx % args.every == 0:
-            found = detect(species_model, person_model, frame, args.conf, args.species_imgsz)
+            found = detect(species_model, person_model, frame, args.conf, args.species_imgsz, generic_model)
             now = datetime.now().isoformat(timespec="seconds")
             for label, c, box, is_person in found:
                 det_log.writerow([now, f"{t:.2f}", idx, label, f"{c:.3f}", *box])

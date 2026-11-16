@@ -6,6 +6,10 @@ gives different photos. Every later result (Day 3 detections, Day 3 review,
 the Day 5 pseudo-labels) is keyed to the original file names, so this script
 re-downloads the same photos by their observation ids instead.
 
+It also restores the v2 additions listed in data/dataset/manifest_v2.csv
+(extra species photos, confuser animals and empty scenes from download_more.py),
+which store the photo url directly.
+
 Usage:
     python scripts/restore_dataset.py
 """
@@ -35,11 +39,19 @@ def get(url, binary=False):
     return None
 
 
+def dest_of(r):
+    """The Day 2 'striped_hyena' photos are all Crocuta crocuta (spotted hyena): the
+    survey picked the wrong taxon. They are kept as spotted-hyena negatives."""
+    if r["species"] == "striped_hyena":
+        return ROOT.parent / "negatives" / "crocuta_crocuta" / r["file"].replace("striped_hyena", "crocuta_crocuta")
+    return ROOT / r["species"] / r["file"]
+
+
 def main():
     with open(ROOT / "attribution.csv", encoding="utf-8") as f:
         rows = list(csv.DictReader(f))
 
-    missing = [r for r in rows if not (ROOT / r["species"] / r["file"]).exists()]
+    missing = [r for r in rows if not dest_of(r).exists()]
     print(f"{len(rows)} photos listed, {len(missing)} to download")
 
     urls = {}
@@ -56,7 +68,7 @@ def main():
 
     failed = []
     for n, r in enumerate(missing, 1):
-        dest = ROOT / r["species"] / r["file"]
+        dest = dest_of(r)
         dest.parent.mkdir(parents=True, exist_ok=True)
         url = urls.get(r["observation_id"])
         data = get(url, binary=True) if url else None
@@ -71,6 +83,30 @@ def main():
     print(f"Done. {len(missing) - len(failed)} downloaded, {len(failed)} failed")
     for f in failed:
         print("  FAILED", f)
+    restore_v2()
+
+
+def restore_v2():
+    manifest = ROOT / "manifest_v2.csv"
+    if not manifest.exists():
+        return
+    with open(manifest, encoding="utf-8") as f:
+        rows = list(csv.DictReader(f))
+    base = {"species": ROOT, "confuser": ROOT.parent / "negatives", "scene": ROOT.parent / "negatives"}
+    todo = [(base[r["group"]] / r["file"].rsplit("_", 1)[0] / r["file"], r["url"]) for r in rows]
+    todo = [(d, u) for d, u in todo if not d.exists()]
+    print(f"v2 manifest: {len(rows)} photos listed, {len(todo)} to download")
+    failed = 0
+    for n, (dest, url) in enumerate(todo, 1):
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        data = get(url, binary=True)
+        if data:
+            dest.write_bytes(data)
+        else:
+            failed += 1
+        if n % 100 == 0:
+            print(f"  {n}/{len(todo)}")
+    print(f"v2 done, {failed} failed")
 
 
 if __name__ == "__main__":

@@ -17,6 +17,10 @@ training run.
 Output: data/yolo_dataset/{images,labels}/{train,val}/ and data.yaml
 (80/20 split per species, fixed seed).
 
+Note (found 2026-11-16): the 60 Day 2 'striped_hyena' photos are all spotted hyenas
+(Crocuta crocuta), so the v1 'striped_hyena' class really learned spotted hyena.
+They now live in data/negatives/crocuta_crocuta/. v2 uses real Hyaena hyaena photos.
+
 Usage:
     python scripts/build_yolo_dataset.py
 """
@@ -72,6 +76,8 @@ def main():
 
         for key, boxes in usable.items():
             src = ROOT / "dataset" / key
+            if not src.exists() and sp == "striped_hyena":  # moved: these were spotted hyenas
+                src = ROOT / "negatives" / "crocuta_crocuta" / src.name.replace(sp, "crocuta_crocuta")
             h, w = cv2.imread(str(src)).shape[:2]
             lines = []
             for x1, y1, x2, y2 in boxes:

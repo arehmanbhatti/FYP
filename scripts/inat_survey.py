@@ -29,7 +29,10 @@ def get(path, **params):
 def main():
     rows = []
     for key, (sci, common, oiv7) in CANDIDATES.items():
-        taxa = get("taxa", q=sci, rank="species", per_page=1)["results"]
+        # Exact name match: the search's first hit can be another species
+        # ("Hyaena hyaena" used to return Crocuta crocuta, the spotted hyena).
+        taxa = [t for t in get("taxa", q=sci, rank="species", per_page=10)["results"]
+                if t["name"].lower() == sci.lower()]
         if not taxa:
             print(f"{sci}: taxon not found")
             continue

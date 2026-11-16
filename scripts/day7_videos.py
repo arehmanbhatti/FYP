@@ -9,8 +9,12 @@ systems run:
 and per clip we count frames with the correct label, frames with a wrong
 species label, and frames with a false person.
 
+'unknown_animal' (animal outside the 8 species, from the open-vocab detector) does
+not count as a wrong species label.
+
 Usage:
     python scripts/day7_videos.py
+    python scripts/day7_videos.py --model runs/species_v1/weights/best.pt --no-unknown --out day7_video_summary_v1.md
 """
 
 import sys
@@ -22,7 +26,7 @@ from ultralytics import YOLO
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from evaluate_pretrained import ANIMALS, EXPECTED, HUMAN, MODEL as PRETRAINED  # noqa: E402
-from video_pipeline import PERSON_MODEL, SPECIES_MODEL, detect  # noqa: E402
+from video_pipeline import PERSON_MODEL, SPECIES_MODEL, detect, load_generic  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent / "data"
 OUT = ROOT / "results" / "day7_video_summary.md"
@@ -34,16 +38,25 @@ EXPECT = {
     "boar_berlin": "wild_boar", "boar_bulgaria": "wild_boar",
     "jackals": "golden_jackal", "peafowl_walking": "indian_peafowl",
     "peafowl_running": "indian_peafowl", "nilgai_zoo": "nilgai",
-    "hyena_spotted": "striped_hyena", "crocodile_nile": "mugger", "gazelle_hluhluwe": "chinkara",
+    "crocodile_nile": "mugger",  # stand-in: Nile crocodile for mugger
+    # Re-checked 2026-11-16: these two are NOT target species. hyena_spotted is Crocuta crocuta
+    # and gazelle_hluhluwe is an impala (Hluhluwe has no gazelles). Both are v2 negatives, so any
+    # target label on them counts as wrong. (Week 1 scored them as striped_hyena / chinkara.)
+    "hyena_spotted": None, "gazelle_hluhluwe": None,
     "camtrap_general": None, "camtrap_jaguarundi": None, "human_hiking": "person",
 }
 
 
 def main():
-    conf = float(sys.argv[sys.argv.index("--conf") + 1]) if "--conf" in sys.argv else CONF
+    arg = lambda k, d: sys.argv[sys.argv.index(k) + 1] if k in sys.argv else d
+    conf = float(arg("--conf", CONF))
+    model_path = Path(arg("--model", str(SPECIES_MODEL)))
+    out = ROOT / "results" / arg("--out", OUT.name)
     pre = YOLO(PRETRAINED)
-    species, person = YOLO(str(SPECIES_MODEL)), YOLO(PERSON_MODEL)
-    lines = [f"## Pretrained vs prototype on the test clips (conf >= {conf}, frame every {SAMPLE_EVERY_SEC}s)\n",
+    species, person = YOLO(str(model_path if model_path.is_absolute() else ROOT.parent / model_path)), YOLO(PERSON_MODEL)
+    generic = None if "--no-unknown" in sys.argv else load_generic()
+    lines = [f"## Pretrained vs prototype on the test clips (conf >= {conf}, frame every {SAMPLE_EVERY_SEC}s, "
+             f"model {model_path.parent.parent.name})\n",
              "Each cell: frames with the correct label / frames with a wrong species label / frames with a false person.\n",
              "| Clip | expected | frames | pretrained OIV7 | prototype | prototype labels (count) |",
              "|---|---|---|---|---|---|"]
@@ -70,11 +83,11 @@ def main():
                 a["wrong"] += bool((got & ANIMALS) - exact - {"Animal", "Mammal"})
                 a["person"] += exp != "person" and bool(got & HUMAN)
 
-                found = detect(species, person, frame, conf, 320)
+                found = detect(species, person, frame, conf, 320, generic)
                 got = {lab for lab, *_ in found}
                 labels.update(lab for lab, *_ in found)
                 b["ok"] += exp in got
-                b["wrong"] += bool(got - {exp, "person"})
+                b["wrong"] += bool(got - {exp, "person", "unknown_animal"})
                 b["person"] += exp != "person" and "person" in got
             idx += 1
         cap.release()
@@ -83,7 +96,7 @@ def main():
         lines.append(f"| {f.stem} | {exp or 'none'} | {n} | {cell(a)} | {cell(b)} | {top} |")
         print(lines[-1])
 
-    OUT.write_text("\n".join(lines), encoding="utf-8")
+    out.write_text("\n".join(lines), encoding="utf-8")
 
 
 if __name__ == "__main__":

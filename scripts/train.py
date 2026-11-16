@@ -6,11 +6,12 @@ Training settings follow the base paper (Velpula et al. 2026): image size
 (transfer learning). The proposal names YOLOv11, so yolo11n.pt is the
 default; pass --model yolo12n.pt to match the paper's YOLOv12 exactly.
 
-Runs on CPU here (no GPU); use Google Colab for larger models / more data.
+Runs on the local GPU (GTX 1660 Super) when available, otherwise on CPU.
 
 Usage:
     python scripts/train.py
     python scripts/train.py --model yolo12n.pt --name species_v12
+    python scripts/train.py --data data/yolo_dataset_v2/data.yaml --name species_v2
 """
 
 import argparse
@@ -28,6 +29,9 @@ def main():
     parser.add_argument("--imgsz", type=int, default=320)
     parser.add_argument("--batch", type=int, default=16)
     parser.add_argument("--name", default="species_v1")
+    parser.add_argument("--data", default="data/yolo_dataset/data.yaml", help="dataset yaml, relative to the project")
+    parser.add_argument("--workers", type=int, default=2,
+                        help="dataloader workers; 4 ran out of RAM on the 8 GB desktop with the v2 dataset")
     parser.add_argument("--resume", action="store_true", help="continue an interrupted run from its last.pt")
     args = parser.parse_args()
 
@@ -40,7 +44,7 @@ def main():
 
     model = YOLO(args.model)
     model.train(
-        data=str(ROOT / "data" / "yolo_dataset" / "data.yaml"),
+        data=str(ROOT / args.data),
         epochs=args.epochs,
         imgsz=args.imgsz,
         batch=args.batch,
@@ -48,7 +52,7 @@ def main():
         name=args.name,
         exist_ok=True,
         seed=42,
-        workers=4,
+        workers=args.workers,
         plots=True,
     )
     metrics = model.val()

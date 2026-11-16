@@ -19,3 +19,16 @@ data/yolo_dataset/
 
 # Annotated pipeline videos (large; rebuild with scripts/video_pipeline.py)
 data/results/pipeline/*.mp4
+
+# v2 dataset additions (rebuild with scripts/download_more.py or restore_dataset.py)
+data/negatives/
+data/yolo_dataset_v2/
+data/download_more_log.txt
+
+# Auto-labeller / open-vocab weights (auto-downloaded by ultralytics)
+models/
+
+# Box review contact sheets (rebuild with scripts/build_yolo_dataset_v2.py)
+data/results/v2_review/
+data/build_v2_log.txt
+data/train_v2_log.txt
