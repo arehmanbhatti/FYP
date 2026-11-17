@@ -66,7 +66,7 @@ Completed:
 | Leopard | Leopard | 6776 / 31 |
 | Chinkara gazelle | Antelope | 632 / 11 |
 | Wild boar | Pig | 35197 / 19 |
-| Striped hyena | none | 6761 / 0 |
+| Striped hyena | none | 509 / 3 (first reported as 6761 / 0, see correction) |
 | Golden jackal | Dog | 3979 / 36 |
 | Indian peafowl | Bird | 24213 / 12 |
 | Nilgai | Antelope | 2367 / 4 |
@@ -84,6 +84,15 @@ count is meaningless. It needs a camera-trap / Kaggle source instead.
   deployment footage will look different.
 - Species labels rely on iNaturalist research-grade community IDs. No image-by-image manual check yet.
 - These are whole-image class labels only. Fine-tuning YOLO would still need bounding boxes.
+
+### Correction (found 2026-11-16): the Week 1 "striped hyena" photos are spotted hyenas
+The iNaturalist taxon used for striped hyena (41886) is *Crocuta crocuta*, the spotted hyena.
+`inat_survey.py` took the first search result without checking the name. All 60 Week 1
+"striped_hyena" photos are therefore spotted hyenas, and **every v1 hyena number below (Day 3, 5, 7)
+is really a spotted-hyena result**. The correct taxon is *Hyaena hyaena* (41888): 509 photos
+worldwide, 3 from Pakistan. The survey now requires an exact scientific-name match, v2 uses 300
+verified striped hyena photos, and the old 60 are kept as spotted-hyena negatives in
+`data/negatives/crocuta_crocuta/`.
 
 ## Day 3 — Pretrained model performance on the dataset
 
@@ -131,8 +140,8 @@ counts, and it is low for 5 of 8 species.
 - **Hard cases the model misses:** tiny or camouflaged animals (leopard in a tree, crocodile
   in water, boar in undergrowth), 39 images. 22 further images contain a clearly visible animal that the model still
   missed, including a leopard on an infrared trail-camera frame and a running boar.
-- **Possible label errors:** at least one "striped hyena" image is clearly a spotted hyena, and a
-  "nilgai" image looks like a domestic cow. Community IDs are not fully reliable.
+- **Possible label errors:** at least one "striped hyena" image is clearly a spotted hyena (later found
+  to be true for all of them, see the Day 2 correction), and a "nilgai" image looks like a domestic cow. Community IDs are not fully reliable.
 - **Species that need better training data:** hyena, jackal, wild boar (weak), then leopard
   vs cheetah, chinkara/nilgai vs deer (class naming). Peafowl and mugger do not.
 
@@ -198,8 +207,9 @@ Completed:
   Boxes are **pseudo-labels**: the Day 3 pretrained detection, renamed to our species (for
   example a "Cheetah" box on a leopard photo becomes a `leopard` box). Images with no live animal
   (Day 3 review) or no usable box were dropped.
-- Fine-tuned YOLO11n at the paper's settings, CPU, 100 epochs (`scripts/train.py`, run in
-  `runs/species_v1/`, weights `best.pt`). The run was interrupted at epoch 26 and resumed.
+- Fine-tuned YOLO11n at the paper's settings, 100 epochs (`scripts/train.py`, run in
+  `runs/species_v1/`, weights `best.pt`). First trained on CPU, then retrained on a GTX 1660 Super
+  (about 15 min) after the project moved to a new machine. All numbers below are from the GPU run.
 - Threshold sweep and a pretrained vs fine-tuned comparison on the same validation images
   (`scripts/day5_evaluate.py`, full tables in `data/results/day5_summary.md`)
 
@@ -210,31 +220,31 @@ Completed:
 
 ### Results (validation split, 63 images, 76 boxes)
 
-Overall **mAP@50 = 0.700, mAP@50-95 = 0.506**.
+Overall **mAP@50 = 0.707, mAP@50-95 = 0.546**.
 
-F1 is flat between conf 0.20 and 0.30 (0.63). **conf = 0.25** was chosen as the operating
-threshold (precision 0.67, recall 0.61). Raising it to 0.50 gives precision 0.74 but recall drops to 0.51.
+F1 is flat between conf 0.25 and 0.40 (0.68). **conf = 0.40** was chosen as the operating
+threshold (precision 0.77, recall 0.61). Raising it to 0.70 gives precision 0.87 but recall drops to 0.45.
 
 | Species | precision | recall | F1 | exact hit, pretrained (Day 3) | exact hit, fine-tuned |
 |---|---|---|---|---|---|
-| leopard | 0.67 | 0.67 | 0.67 | 12% | 88% |
-| chinkara | 0.78 | 0.54 | 0.64 | 30% | 70% |
-| wild boar | 0.50 | 0.40 | 0.44 | 50% | 50% |
-| striped hyena | 0.43 | 0.38 | 0.40 | 0% | 57% |
-| golden jackal | 1.00 | 0.83 | 0.91 | 17% | 83% |
-| indian peafowl | 0.64 | 0.64 | 0.64 | 100% | **73%** |
-| nilgai | 0.64 | 0.54 | 0.58 | 10% | 70% |
-| mugger | 0.70 | 0.88 | 0.78 | 100% | 100% |
-| **all** | 0.67 | 0.61 | 0.63 | **41%** | **75%** |
+| leopard | 0.75 | 0.67 | 0.71 | 12% | 88% |
+| chinkara | 0.73 | 0.62 | 0.67 | 30% | 80% |
+| wild boar | 1.00 | 0.20 | 0.33 | 50% | 50% |
+| striped hyena* | 0.80 | 1.00 | 0.89 | 0% | 100% |
+| golden jackal | 1.00 | 0.33 | 0.50 | 17% | 33% |
+| indian peafowl | 0.80 | 0.57 | 0.67 | 100% | **73%** |
+| nilgai | 0.67 | 0.62 | 0.64 | 10% | 80% |
+| mugger | 0.83 | 0.62 | 0.71 | 100% | 86% |
+| **all** | 0.77 | 0.61 | 0.68 | **41%** | **76%** |
 
-"Exact hit" = the image gets at least one box with the right species name at conf >= 0.25.
+Precision / recall / F1: box level at conf 0.40. "Exact hit" = the image gets at least one box with
+the right species name at conf >= 0.25. *Spotted hyena photos, see the Day 2 correction.
 
 ### Observations
-- Fine-tuning fixed the naming problem: exact-species hits went from 41% to 75%. The biggest
-  gains are on leopard, jackal, nilgai and hyena, which the pretrained model mislabelled.
+- Fine-tuning fixed the naming problem: exact-species hits went from 41% to 76%. The biggest
+  gains are on leopard, nilgai, chinkara and hyena, which the pretrained model mislabelled.
 - **Peafowl got worse** (100% -> 73%). The pretrained model saw millions of birds. Our model saw 43 peafowl photos.
-- **Wild boar is the weakest class.** Only 14 training images. In the confusion matrix 3 of
-  its 5 validation boxes are predicted as peafowl.
+- **Wild boar (recall 0.20, only 14 training images) and golden jackal (recall 0.33) are the weakest classes.**
 - About a quarter to a third of leopard, nilgai and hyena boxes are missed entirely ("background" in
   `runs/species_v1/confusion_matrix_normalized.png`).
 - **These numbers are optimistic.** The validation boxes are pseudo-labels from the pretrained model,
@@ -279,37 +289,118 @@ Frames with the correct label / a wrong species label / a false person:
 
 | Clip | expected | pretrained OIV7 | prototype |
 |---|---|---|---|
-| leopard_india | leopard | 0 / 31 / 0 | **28 / 0 / 1** |
-| leopard_tree | leopard | 0 / 2 / 0 | **9 / 0 / 0** |
-| hyena_spotted | striped_hyena | 0 / 7 / 0 | **7 / 0 / 0** |
-| jackals | golden_jackal | 19 / 45 / 0 | **38 / 35 / 0** |
-| peafowl_walking | indian_peafowl | 30 / 0 / 0 | 30 / 0 / 0 |
-| human_hiking | person | 48 / 3 / 0 | 45 / 8 / 0 |
-| gazelle_hluhluwe | chinkara | **46 / 39 / 0** | 11 / 42 / 1 |
+| leopard_india | leopard | 0 / 31 / 0 | **31 / 2 / 0** |
+| leopard_tree | leopard | 0 / 2 / 0 | **12 / 0 / 0** |
+| hyena_spotted | striped_hyena* | 0 / 7 / 0 | **6 / 1 / 0** |
+| jackals | golden_jackal | 19 / 45 / 0 | **27 / 35 / 0** |
+| peafowl_walking | indian_peafowl | 30 / 0 / 0 | 28 / 15 / 0 |
+| human_hiking | person | 48 / 3 / 0 | 43 / 4 / 0 |
+| gazelle_hluhluwe | chinkara* | **46 / 39 / 0** | 0 / 46 / 0 |
 | peafowl_running | indian_peafowl | **6 / 1 / 0** | 0 / 44 / 0 |
-| nilgai_zoo | nilgai | 0 / 20 / 0 | 0 / 26 / 9 |
-| crocodile_nile | mugger | 0 / 3 / 7 | 0 / 0 / 9 |
-| boar_berlin | wild_boar | 0 / 0 / 0 | 0 / 0 / 0 |
-| boar_bulgaria | wild_boar | 0 / 6 / 0 | 0 / 0 / 1 |
-| camtrap_general | none | 0 / 20 / 0 | 0 / 20 / 0 |
-| camtrap_jaguarundi | none | 0 / 6 / 0 | 0 / 10 / 0 |
+| nilgai_zoo | nilgai | 0 / 20 / 0 | **20 / 7 / 4** |
+| crocodile_nile | mugger | 0 / 3 / 7 | 0 / 3 / 9 |
+| boar_berlin | wild_boar | 0 / 0 / 0 | 1 / 4 / 0 |
+| boar_bulgaria | wild_boar | 0 / 6 / 0 | 1 / 0 / 0 |
+| camtrap_general | none | 0 / 20 / 0 | 0 / 19 / 0 |
+| camtrap_jaguarundi | none | 0 / 6 / 0 | 0 / 7 / 0 |
+
+Numbers are from the GPU-retrained v1 model (rerun on 2026-11-17, `data/results/day7_video_summary_v1.md`).
+
+Correction: `hyena_spotted` shows a spotted hyena (the v1 "hyena" class was trained on spotted
+hyenas, so this clip flatters it), and `gazelle_hluhluwe` shows an impala, not a gazelle. From v2
+on, both clips are scored as non-target clips (expected: none).
 
 ### Observations
-- **Clear wins on the species the pretrained model could not name:** leopard (0 -> 28 and
-  0 -> 9 frames), hyena (0 -> 7) and jackal (19 -> 38). Peafowl walking stays perfect.
-- **Regressions:** the gazelle clip drops from 46 to 11 correct frames (now called jackal or nilgai),
-  and peafowl_running drops from 6 to 0: the herd of chital deer in it is called nilgai and wild boar.
-- **Nilgai is not recognised in the zoo clip** (labelled wild boar), and the COCO person model
-  fires on it in 9 frames. On crocodile_nile the person model fires on a stork (9 frames).
-- **Wild boar is still 0** on both clips (night and dusk footage). It has the fewest training
-  images, and no night or IR images were in the training set.
+- **Clear wins on the species the pretrained model could not name:** leopard (0 -> 31 and
+  0 -> 12 frames), nilgai in the zoo clip (0 -> 20) and jackal (19 -> 27). The hyena clip (0 -> 6)
+  is a spotted hyena, which the v1 "hyena" class was trained on.
+- **Regressions:** the gazelle clip (really an impala) drops from 46 to 0 correct frames, every frame
+  called nilgai, and peafowl_running drops from 6 to 0: the herd of chital deer in it is called nilgai.
+  On peafowl_walking, 15 frames also show a false mugger.
+- **Wild boar:** 1 frame per clip (night and dusk footage). It has the fewest training images, and no
+  night or IR images were in the training set.
 - **No "unknown animal" handling.** Camera-trap clips with non-target animals (elk, jaguarundi)
-  are forced into one of our 8 classes.
+  are forced into one of our 8 classes. The COCO person model also fires on a stork and a nilgai.
 
 ### Next steps (Week 2)
 More data per species (200-300 images, boxes reviewed in Roboflow, night/IR images, people and
 empty scenes as negatives), retrain on Colab (also YOLOv12 to match the base paper), then the
 YAMNet audio branch and the fusion layer.
+
+## Week 1 fixes (v2)
+
+Goal: fix the Week 1 weaknesses (too little data, no negatives, no night/IR images, wrong hyena,
+no separate test set) and also train the base paper's YOLOv12.
+
+- `scripts/download_more.py`: 300 photos per species, 14 confuser species x 80 (cow, buffalo,
+  Bengal fox, spotted hyena, jungle cat, ...), 6 empty habitat scenes x 40. The exact file list is in
+  `data/dataset/manifest_v2.csv`.
+- Striped hyena fixed (see the Day 2 correction).
+- `scripts/build_yolo_dataset_v2.py` -> `data/yolo_dataset_v2/`: OIV7 + YOLO-World pseudo-labels,
+  1307 species train images + 416 synthetic IR copies + 1547 negative images, hash-based 70/15/15
+  train / val / test split. Per-species counts in `data/results/v2_dataset_summary.md`.
+- Two models at the paper's settings (320 px, batch 16, 100 epochs, GTX 1660 Super):
+  **species_v2** (YOLO11n, about 80 min) and **species_v12** (YOLO12n, about 90 min).
+  Validation mAP@50: v2 0.738, v12 0.729 (523 images).
+- `video_pipeline.py`: YOLO-World `unknown_animal` detector for non-target animals and a revised
+  person rule. Default species model is now `species_v2`.
+
+### Test split results (`scripts/evaluate_v2.py`, `data/results/v2_evaluation.md`)
+
+269 animal photos (341 boxes) and 248 negative images that no model was trained on. 47 test images
+v1 had already seen were left out. Each model's threshold was chosen on the validation split.
+
+| Model | conf | mAP@50 | mAP@50-95 | precision | recall | exact-species hit | false alarms on negatives | recall on synthetic IR |
+|---|---|---|---|---|---|---|---|---|
+| v1 (Week 1, YOLO11n) | 0.50 | 0.439 | 0.317 | 0.77 | 0.50 | 62% | 49% (121/248) | 0.29 |
+| **v2 (YOLO11n)** | 0.40 | **0.791** | **0.613** | 0.91 | **0.70** | **81%** | 17% (41/248) | **0.59** |
+| v12 (YOLO12n) | 0.50 | 0.757 | 0.586 | **0.94** | 0.66 | 75% | **8% (19/248)** | 0.54 |
+
+| Recall per species | leopard | chinkara | wild boar | striped hyena | jackal | peafowl | nilgai | mugger |
+|---|---|---|---|---|---|---|---|---|
+| v1 | 0.68 | 0.56 | 0.23 | 0.41 | 0.24 | 0.52 | 0.64 | 0.46 |
+| v2 | 0.90 | 0.63 | 0.61 | 0.81 | 0.55 | 0.65 | 0.67 | 0.85 |
+| v12 | 0.88 | 0.62 | 0.48 | 0.86 | 0.42 | 0.58 | 0.71 | 0.69 |
+
+False alarms by negative type (images with any species box): confuser animals 104 / 39 / 19 of 187,
+empty scenes 9 / 2 / 0 of 41, people 8 / 0 / 0 of 20 (v1 / v2 / v12).
+
+### Test clips (`day7_videos.py`, conf 0.25; `data/results/day7_video_summary_v1.md` and `_v2.md`)
+
+Frames with the correct label / a wrong species label / a false person. `unknown_animal` is not a
+wrong label. v1 runs without the unknown-animal detector, as in Week 1.
+
+| Clip | expected | v1 | v2 |
+|---|---|---|---|
+| leopard_india | leopard | 31 / 2 / 0 | **31 / 0 / 0** |
+| leopard_tree | leopard | 12 / 0 / 0 | **18 / 0 / 0** |
+| jackals | golden_jackal | 27 / 35 / 0 | **48 / 8 / 0** |
+| peafowl_walking | indian_peafowl | 28 / 15 / 0 | **30 / 0 / 0** |
+| human_hiking | person | 43 / 4 / 0 | 44 / 3 / 0 |
+| boar_berlin | wild_boar | 1 / 4 / 0 | **5 / 2 / 0** |
+| boar_bulgaria | wild_boar | 1 / 0 / 0 | 0 / 6 / 0 |
+| nilgai_zoo | nilgai | **20 / 7 / 4** | 0 / 0 / 4 |
+| crocodile_nile | mugger | 0 / 3 / 9 | 0 / 0 / 9 |
+| peafowl_running | indian_peafowl | 0 / 44 / 0 | 0 / 0 / 0 |
+| hyena_spotted | none (spotted hyena) | 0 / 7 / 0 | **0 / 0 / 0** |
+| gazelle_hluhluwe | none (impala) | 0 / 46 / 0 | 0 / 46 / 0 |
+| camtrap_general | none (elk) | 0 / 19 / 0 | 0 / 10 / 0 |
+| camtrap_jaguarundi | none | 0 / 7 / 0 | 0 / 5 / 0 |
+
+### Observations
+- **v2 is the best model overall:** test mAP@50 0.44 -> 0.79, recall 0.50 -> 0.70, and night/IR
+  recall doubles (0.29 -> 0.59). It is now the default in `video_pipeline.py`.
+- **Week 1's 0.707 was optimistic.** On the new, harder test split v1 scores 0.439. Its own
+  63-image validation set was too small and too easy.
+- **Negatives work.** False alarms on negatives fall from 49% to 17% (v2) and 8% (v12), and to zero
+  on people and empty scenes. The spotted-hyena clip is now `unknown_animal`, not striped hyena.
+- **YOLOv12 (base paper) did not beat YOLO11n here:** lower mAP and recall, but the fewest false
+  alarms (highest precision). With the same small dataset the newer architecture gives no gain.
+- **Still weak:** golden jackal (recall 0.55, 0.30 on IR), wild boar on night video, and nilgai in
+  the zoo clip (now `unknown_animal`, 0 correct frames vs 20 for v1). The impala clip is still called
+  nilgai, and the COCO person model still fires on the stork (9 frames).
+- **Caveat:** test boxes are still automatic pseudo-labels, and the IR images are synthetic, not real
+  camera-trap footage. Roboflow review, Pakistan data and a field test are next.
 
 ## Setup on a new machine
 
@@ -338,7 +429,12 @@ venv\Scripts\python.exe scripts\day5_evaluate.py
 venv\Scripts\python.exe scripts\video_pipeline.py --source data\sample_videos\leopard_india.webm --conf 0.25
 venv\Scripts\python.exe scripts\video_pipeline.py --source 0 --show --conf 0.25      (webcam)
 venv\Scripts\python.exe scripts\day7_videos.py --conf 0.25
+venv\Scripts\python.exe scripts\train.py --data data/yolo_dataset_v2/data.yaml --name species_v2
+venv\Scripts\python.exe scripts\train.py --model yolo12n.pt --data data/yolo_dataset_v2/data.yaml --name species_v12
+venv\Scripts\python.exe scripts\evaluate_v2.py
 ```
+
+On 8 GB RAM, close Chrome and other heavy apps while training; `--workers 1` uses less RAM.
 
 Annotated images go to `data/results/run/`, pipeline output to `data/results/pipeline/`.
 
@@ -351,10 +447,12 @@ FYP/
   data/
     dataset/                Day 2 species photos
     yolo_dataset/           YOLO-format training set (data.yaml, 8 classes)
+    yolo_dataset_v2/        v2 set: more photos, negatives, IR copies, train/val/test
     sample_images/          test images
     sample_videos/          test clips (Day 3 / Day 7)
     results/                Day 3/5/7 summaries, annotated images, pipeline output
   runs/species_v1/          fine-tuned model (weights/best.pt) and training plots
+  runs/species_v2/, species_v12/   v2 models (YOLO11n, YOLO12n)
   scripts/
     detect.py               YOLO detection on an image or video
     download_dataset.py, check_dataset.py, flag_evidence.py   Day 2 dataset
@@ -364,6 +462,8 @@ FYP/
     day5_evaluate.py        Day 5 threshold sweep and comparison
     video_pipeline.py       Day 6 video pipeline (species + person, alerts, CSV log)
     day7_videos.py          Day 7 prototype vs pretrained on test clips
+    download_more.py, build_yolo_dataset_v2.py   v2 data and dataset
+    evaluate_v2.py          v1 / v2 / v12 comparison on the v2 test split
     make_report.py, make_week1_report.py   PDF reports
   requirements.txt
 ```

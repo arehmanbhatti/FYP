@@ -1,0 +1,20 @@
+## Pretrained vs prototype on the test clips (conf >= 0.25, frame every 0.5s, model species_v2)
+
+Each cell: frames with the correct label / frames with a wrong species label / frames with a false person.
+
+| Clip | expected | frames | pretrained OIV7 | prototype | prototype labels (count) |
+|---|---|---|---|---|---|
+| boar_berlin | wild_boar | 22 | 0 / 0 / 0 | 5 / 2 / 0 | wild_boar (7), mugger (2) |
+| boar_bulgaria | wild_boar | 21 | 0 / 6 / 0 | 0 / 6 / 0 | unknown_animal (8), mugger (6) |
+| camtrap_general | none | 20 | 0 / 20 / 0 | 0 / 10 / 0 | unknown_animal (29), nilgai (10) |
+| camtrap_jaguarundi | none | 30 | 0 / 6 / 0 | 0 / 5 / 0 | unknown_animal (12), wild_boar (4), leopard (3) |
+| crocodile_nile | mugger | 42 | 0 / 3 / 7 | 0 / 0 / 9 | unknown_animal (9), person (9) |
+| gazelle_hluhluwe | none | 46 | 0 / 46 / 0 | 0 / 46 / 0 | nilgai (46), unknown_animal (14), chinkara (3) |
+| human_hiking | person | 50 | 48 / 3 / 0 | 44 / 3 / 0 | person (78), indian_peafowl (3), unknown_animal (2) |
+| hyena_spotted | none | 7 | 0 / 7 / 0 | 0 / 0 / 0 | unknown_animal (7) |
+| jackals | golden_jackal | 49 | 19 / 45 / 0 | 48 / 8 / 0 | golden_jackal (102), unknown_animal (29), striped_hyena (7) |
+| leopard_india | leopard | 31 | 0 / 31 / 0 | 31 / 0 / 0 | leopard (31) |
+| leopard_tree | leopard | 18 | 0 / 2 / 0 | 18 / 0 / 0 | leopard (18) |
+| nilgai_zoo | nilgai | 42 | 0 / 20 / 0 | 0 / 0 / 4 | unknown_animal (44), person (4) |
+| peafowl_running | indian_peafowl | 46 | 6 / 1 / 0 | 0 / 0 / 0 | unknown_animal (4) |
+| peafowl_walking | indian_peafowl | 30 | 30 / 0 / 0 | 30 / 0 / 0 | indian_peafowl (35) |

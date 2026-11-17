@@ -145,7 +145,7 @@ story.append(make_table(
         ["Leopard", "0.75", "0.67", "12%", "88%"],
         ["Chinkara", "0.73", "0.62", "30%", "80%"],
         ["Wild boar", "1.00", "0.20", "50%", "50%"],
-        ["Striped hyena", "0.80", "1.00", "0%", "100%"],
+        ["Striped hyena*", "0.80", "1.00", "0%", "100%"],
         ["Golden jackal", "1.00", "0.33", "17%", "33%"],
         ["Indian peafowl", "0.80", "0.57", "100%", "73%"],
         ["Nilgai", "0.67", "0.62", "10%", "80%"],
@@ -189,7 +189,7 @@ story.append(make_table(
     [
         ["leopard_india", "leopard", "0 / 31 / 0", "31 / 2 / 1"],
         ["leopard_tree", "leopard", "0 / 2 / 0", "12 / 0 / 0"],
-        ["hyena_spotted", "striped hyena", "0 / 7 / 0", "6 / 1 / 0"],
+        ["hyena_spotted*", "striped hyena", "0 / 7 / 0", "6 / 1 / 0"],
         ["jackals", "golden jackal", "19 / 45 / 0", "27 / 35 / 0"],
         ["peafowl_walking", "Indian peafowl", "30 / 0 / 0", "28 / 15 / 0"],
         ["human_hiking", "person", "48 / 3 / 0", "46 / 3 / 0"],
@@ -214,6 +214,44 @@ story.extend(bullets([
     "images were used in training.",
     "There is no unknown-animal handling: non-target animals in camera-trap clips are forced into one "
     "of the 8 classes. The COCO person model also fires on some animals (stork, nilgai).",
+]))
+
+# ---------------- Correction ----------------
+story.append(Paragraph("Correction (added 16 November): striped hyena photos", h1))
+story.extend(bullets([
+    "The iNaturalist taxon used for striped hyena in Week 1 (41886) is Crocuta crocuta, the spotted hyena. "
+    "All 60 Week 1 \"striped hyena\" photos were spotted hyenas, so every hyena result in this report "
+    "(marked *) is really a spotted-hyena result. The hyena_spotted test clip also shows a spotted hyena, which "
+    "explains why the prototype labelled it well.",
+    "The correct taxon is Hyaena hyaena (41888): 509 photos worldwide and only 3 from Pakistan (not 6761 / 0 as "
+    "first reported). The survey script now requires an exact scientific-name match.",
+    "The gazelle_hluhluwe clip turned out to show an impala, not a gazelle, so it is not a fair chinkara test.",
+    "The v2 dataset uses 300 verified striped hyena photos and keeps the old spotted-hyena photos as negative "
+    "examples, so the model learns to tell the two species apart.",
+]))
+
+# ---------------- Follow-up ----------------
+story.append(Paragraph("Follow-up (17 November): v2 retraining and a separate test set", h1))
+story.append(Paragraph(
+    "To fix these weaknesses, a v2 dataset was built: 300 photos per species (with the correct striped hyena), "
+    "1547 negative images (confuser animals, empty scenes, people), synthetic night/IR copies, and a 70/15/15 "
+    "train/val/test split. Two models were trained at the paper's settings. All three models were then compared "
+    "on the held-out test split (269 animal photos, 248 negatives), with each threshold chosen on validation.", body))
+story.append(Spacer(1, 5))
+story.append(make_table(
+    ["Model", "mAP@50", "Recall", "Exact hit", "False alarms", "IR recall"],
+    [
+        ["v1 (this report)", "0.439", "0.50", "62%", "49%", "0.29"],
+        ["v2 (YOLO11n)", "0.791", "0.70", "81%", "17%", "0.59"],
+        ["v12 (YOLOv12n)", "0.757", "0.66", "75%", "8%", "0.54"],
+    ],
+    [4.0 * cm, 2.2 * cm, 2.2 * cm, 2.4 * cm, 2.6 * cm, 2.2 * cm],
+))
+story.append(Spacer(1, 4))
+story.extend(bullets([
+    "The Week 1 validation score (0.707) was optimistic: on the harder, unseen test split v1 scores 0.439.",
+    "v2 (YOLO11n) is the best model overall and is now the pipeline default. YOLOv12 gave the fewest false "
+    "alarms but lower recall. Full tables are in data/results/v2_evaluation.md and the README.",
 ]))
 
 # ---------------- Limitations / next ----------------
