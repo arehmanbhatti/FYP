@@ -38,6 +38,7 @@ OUT = ROOT / "data" / "results" / "pipeline"
 SPECIES_MODEL = ROOT / "runs" / "species_v2" / "weights" / "best.pt"
 PERSON_MODEL = "yolo11n.pt"  # COCO, class 0 = person
 COOLDOWN_SEC = 10
+BANNER_SEC = 3  # an alert stays on screen this long in the annotated video
 SPECIES_COLOR = (0, 200, 0)
 PERSON_COLOR = (0, 0, 255)
 UNKNOWN_COLOR = (0, 165, 255)
@@ -109,6 +110,20 @@ def draw(frame, found):
         cv2.putText(frame, text, (x1 + 3, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
 
 
+def draw_alerts(frame, recent, t):
+    """Banner at the top of the frame for alerts raised in the last BANNER_SEC seconds."""
+    y = 8
+    for t0, kind, label, c in recent:
+        if t - t0 > BANNER_SEC:
+            continue
+        text = f"ALERT  {kind}: {label} ({c:.2f})  at {t0:.1f}s"
+        color = (0, 0, 200) if kind == "HUMAN INTRUSION" else (0, 140, 0)
+        (tw, th), _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 2)
+        cv2.rectangle(frame, (8, y), (8 + tw + 16, y + th + 16), color, -1)
+        cv2.putText(frame, text, (16, y + th + 7), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+        y += th + 22
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--source", required=True, help="video file, or a webcam index such as 0")
@@ -118,7 +133,9 @@ def main():
     parser.add_argument("--every", type=int, default=3, help="run detection every N frames, reuse boxes between")
     parser.add_argument("--show", action="store_true", help="show a live window (press q to stop)")
     parser.add_argument("--no-unknown", action="store_true", help="skip the unknown-animal detector")
+    parser.add_argument("--out", default=str(OUT), help="output folder")
     args = parser.parse_args()
+    out = Path(args.out)
 
     species_model = YOLO(args.species_model)
     person_model = YOLO(PERSON_MODEL)
@@ -135,16 +152,16 @@ def main():
     scale = min(1.0, OUT_WIDTH / w)
     out_size = (round(w * scale), round(h * scale))
 
-    OUT.mkdir(parents=True, exist_ok=True)
+    out.mkdir(parents=True, exist_ok=True)
     stem = f"webcam{args.source}" if is_cam else Path(args.source).stem
-    writer = cv2.VideoWriter(str(OUT / f"{stem}_annotated.mp4"), cv2.VideoWriter_fourcc(*"mp4v"), fps, out_size)
-    det_file = open(OUT / f"{stem}_detections.csv", "w", newline="", encoding="utf-8")
-    alert_file = open(OUT / f"{stem}_alerts.csv", "w", newline="", encoding="utf-8")
+    writer = cv2.VideoWriter(str(out / f"{stem}_annotated.mp4"), cv2.VideoWriter_fourcc(*"mp4v"), fps, out_size)
+    det_file = open(out / f"{stem}_detections.csv", "w", newline="", encoding="utf-8")
+    alert_file = open(out / f"{stem}_alerts.csv", "w", newline="", encoding="utf-8")
     det_log, alert_log = csv.writer(det_file), csv.writer(alert_file)
     det_log.writerow(["timestamp", "video_time_s", "frame", "label", "conf", "x1", "y1", "x2", "y2"])
     alert_log.writerow(["timestamp", "video_time_s", "label", "conf", "type"])
 
-    last_alert, found, idx, n_det = {}, [], 0, 0
+    last_alert, recent, found, idx, n_det = {}, [], [], 0, 0
     while True:
         ok, frame = cap.read()
         if not ok:
@@ -160,9 +177,11 @@ def main():
                     last_alert[label] = t
                     kind = "HUMAN INTRUSION" if is_person else "WILDLIFE"
                     alert_log.writerow([now, f"{t:.2f}", label, f"{c:.3f}", kind])
+                    recent = [a for a in recent if t - a[0] <= BANNER_SEC] + [(t, kind, label, c)]
                     print(f"[ALERT {t:6.1f}s] {kind}: {label} ({c:.2f})")
         draw(frame, found)
         frame = cv2.resize(frame, out_size) if scale < 1 else frame
+        draw_alerts(frame, recent, t)
         writer.write(frame)
         if args.show:
             cv2.imshow("wildlife monitor", frame)
@@ -175,7 +194,7 @@ def main():
     det_file.close()
     alert_file.close()
     cv2.destroyAllWindows()
-    print(f"\n{idx} frames, {n_det} detections logged. Outputs in {OUT}")
+    print(f"\n{idx} frames, {n_det} detections logged. Outputs in {out}")
 
 
 if __name__ == "__main__":

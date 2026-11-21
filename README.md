@@ -432,6 +432,7 @@ venv\Scripts\python.exe scripts\day7_videos.py --conf 0.25
 venv\Scripts\python.exe scripts\train.py --data data/yolo_dataset_v2/data.yaml --name species_v2
 venv\Scripts\python.exe scripts\train.py --model yolo12n.pt --data data/yolo_dataset_v2/data.yaml --name species_v12
 venv\Scripts\python.exe scripts\evaluate_v2.py
+venv\Scripts\python.exe scripts\video_pipeline.py --source data\sample_videos\jackals.webm --conf 0.40 --out data\results\demo   (supervisor demo: boxes + alert banner)
 ```
 
 On 8 GB RAM, close Chrome and other heavy apps while training; `--workers 1` uses less RAM.

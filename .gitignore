@@ -1,4 +1,5 @@
 venv/
+venv_old/
 __pycache__/
 *.pyc
 
@@ -19,6 +20,10 @@ data/yolo_dataset/
 
 # Annotated pipeline videos (large; rebuild with scripts/video_pipeline.py)
 data/results/pipeline/*.mp4
+data/results/demo/*.mp4
+
+# Training / evaluation console logs
+*.log
 
 # v2 dataset additions (rebuild with scripts/download_more.py or restore_dataset.py)
 data/negatives/
